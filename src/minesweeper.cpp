@@ -1,6 +1,8 @@
 #include <iostream>
 #include <array>
 #include <raylib.h>
+#include <vector>
+#include <algorithm>
 
 using std::array,std::cout,std::endl;
 
@@ -24,7 +26,7 @@ enum cellState
 
 
 void drawBoard();
-bool initializeMines(Vector2 initialClick,int,int numberOfBombs=row*column*0.3);
+bool initializeMines(Vector2 initialClick,int,int numberOfBombs=row*column*0.25);
 int processInput(Vector2 &);
 void updateBoard(Vector2 mouseInfo,int);
 void setup();
@@ -137,28 +139,38 @@ void drawBoard()
 
 }
 
+
 bool initializeMines(Vector2 initialClick,int mouseButton,int numberOfBombs)
 {
     if(mouseButton!=MOUSE_BUTTON_LEFT)
         return false;
 
+    std::vector<int> mineList;    
+   
     for(int i=0;i<numberOfBombs;i++)
     {
         int x=rand()%column,y=rand()%row;
-        int bufferSize=2;       
+        int bufferSize=2;
 
-        if(x-bufferSize<initialClick.x &&x+bufferSize>initialClick.x && y-bufferSize<initialClick.y && y+bufferSize>initialClick.y)
+        bool noMineInFirstClick=(x-bufferSize<initialClick.x &&x+bufferSize>initialClick.x && y-bufferSize<initialClick.y && y+bufferSize>initialClick.y);     
+        bool notInCurrentList=(std::find(std::begin(mineList), std::end(mineList), (x+y*column)) != std::end(mineList));
+        
+        if(noMineInFirstClick || notInCurrentList)
         {
-            while(x-bufferSize<initialClick.x &&x+bufferSize>initialClick.x && y-bufferSize<initialClick.y && y+bufferSize>initialClick.y)
+            while(noMineInFirstClick || notInCurrentList)
             {
                 x=rand()%column;
                 y=rand()%row;
+                noMineInFirstClick=(x-bufferSize<initialClick.x &&x+bufferSize>initialClick.x && y-bufferSize<initialClick.y && y+bufferSize>initialClick.y);
+                notInCurrentList=(std::find(std::begin(mineList), std::end(mineList), (x+y*column)) != std::end(mineList));
             }
                 
-        }
+        }        
         board.at(x+column*y)=MINE;
+        mineList.push_back(x+column*y);
         cout<<x<<" "<<y<<endl;
     }
+    cout<<"Total mines:"<<mineList.size()<<endl;
 
     
     return true;
