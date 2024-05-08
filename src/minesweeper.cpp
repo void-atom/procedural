@@ -7,9 +7,9 @@
 using std::array,std::cout,std::endl;
 
 constexpr int screenWidth=900,screenHeight=900;
-constexpr int row=10,column=10,unitSize=40;
+constexpr int row=15,column=15,unitSize=40;
 bool gameOver=false;
-int flags=row*column*0.25;
+int flags=row*column*0.25,gameTime=0;
 
 
 array<char,row*column> board;
@@ -29,6 +29,7 @@ void drawBoard();
 bool initializeMines(Vector2 initialClick,int,int numberOfBombs=row*column*0.25);
 int processInput(Vector2 &);
 void updateBoard(Vector2 mouseInfo,int);
+void openCompletelySafeCells(int currentCellX,int currentCellY);
 void setup();
 int assignNumbers(int x, int y);
 void gameOverDisplay();
@@ -44,8 +45,8 @@ void drawBoard()
     Vector2 size={unitSize-1,unitSize-1};
 
     int flagFontSize=30,numberFontSize=20;
-    DrawText(TextFormat("FLAGS: %d", flags),start.x+unitSize/3,start.y/2,flagFontSize,BLACK);
-
+    DrawText(TextFormat("FLAGS: %d", flags),start.x+unitSize/3,start.y/2,flagFontSize,BLACK);    
+    DrawText(TextFormat("TIME: %d",gameTime),start.x+unitSize*column/2,start.y/2,flagFontSize,BLACK);
 
     for(int y=0;y<row;y++)
     {
@@ -57,8 +58,13 @@ void drawBoard()
 
             if(board.at(index)==REVEALED)
             {
-                int cellNumber=assignNumbers(x,y)+'0';                
-                DrawText(TextFormat("%c",cellNumber),start.x+unitSize/3,start.y+unitSize/3,numberFontSize,BLACK);
+                if(assignNumbers(x,y))
+                {
+                    int cellNumber=assignNumbers(x,y)+'0';                                
+                    DrawText(TextFormat("%c",cellNumber),start.x+unitSize/3,start.y+unitSize/3,numberFontSize,BLACK);
+
+                }
+                
 
             }
 
@@ -117,12 +123,16 @@ void drawBoard()
         if(highlightedCellState==REVEALED)
         {
             // cout<<"Highlighted cell: "<<highlightedCell.x<<" "<<highlightedCell.y<<endl;
-            char cellNumber[2]={char(assignNumbers((int)highlightedCell.x,(int)highlightedCell.y)+'0'),'\0'};            
             // cout<<highlightedCell.x<<" "<<highlightedCell.y<<cellNumber<<endl;
             
             DrawRectangleV(highlightStart,size,WHITE);
             DrawRectangleV(highlightStart,size,highlighted);
-            DrawText(cellNumber,highlightStart.x+unitSize/3,highlightStart.y+unitSize/3,20,BLACK);
+            if(assignNumbers(highlightedCell.x,highlightedCell.y))
+            {
+                char cellNumber[]={char(assignNumbers((int)highlightedCell.x,(int)highlightedCell.y)+'0'),'\0'};
+                DrawText(cellNumber,highlightStart.x+unitSize/3,highlightStart.y+unitSize/3,20,BLACK);
+            }
+           
         }
 
         if(highlightedCellState==FLAGGED || highlightedCellState==FLAGGED_MINE )
@@ -181,12 +191,28 @@ void cheat()
 {
     if(IsKeyPressed(KEY_C))
     {        
-        // make all hidden cells to revealed
-        for(int i=0;i<row*column;i++)
+        // reveal some hidden cells
+        int counter=0,Xindex=rand()%column,Yindex=rand()%row;
+        for(int i=0;i<row*column/2;i++)
         {
-            if(board.at(i)==HIDDEN)
-                board.at(i)=REVEALED; 
-        }
+            if((Xindex+Yindex*column)>row*column)
+                break;
+            if(board.at(Xindex+Yindex*column)==HIDDEN)
+            {
+                openCompletelySafeCells(Xindex,Yindex);
+                counter++;
+            }
+            Xindex++;
+            if((Xindex)%column==0)
+            {
+                Xindex=0;
+                Yindex++;
+            }
+            if(counter==8 || Yindex>=row)
+                break;                
+
+        }        
+        
     }
     
 }
@@ -198,6 +224,7 @@ int processInput(Vector2& mousePosition)
         gameOver=true;
         return -1;
     }
+    gameTime=(int)GetTime();
     cheat();
     int startX=screenWidth/2-column*unitSize/2;
     int startY=screenHeight/2-row*unitSize/2;
@@ -307,11 +334,10 @@ void openCompletelySafeCells(int currentCellX,int currentCellY)
 }
 
 void updateBoard(Vector2 mouseInfo,int mouseClick)
-{
+{    
     if(mouseClick<0)
         return;
-    
-    
+
     int cellIndex=(int)mouseInfo.x+(int)mouseInfo.y*column;
     Vector2 temp={(float)cellIndex,0.0f};
 
