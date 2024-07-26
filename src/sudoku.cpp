@@ -12,7 +12,7 @@ struct int2d
     int y;
 };
 
-// class inputHandling;
+class inputHandling;
 class board
 {
 private:
@@ -20,6 +20,7 @@ private:
     int row, column, unitSize,hoveringCell;
     Vector2 plotStart, plotEnd, hLineStart, hLineEnd, vLineStart, vLineEnd;
     bool hover;
+    inputHandling* input;
 
 public:    
     board();    
@@ -42,7 +43,7 @@ public:
     inputHandling();
     ~inputHandling();
     
-    char getCurrentKeyPressed();
+    int getCurrentKeyPressed();
     int2d getMouseCursorPosition();
     bool getMouseButtonPressed();
 
@@ -54,6 +55,7 @@ public:
 
 board::board()
 {
+    input=new inputHandling();
     row = 9, column = 9, unitSize = 50,hoveringCell=-1;
     screen = {900, 900};
     hover=false;
@@ -73,18 +75,35 @@ board::board()
 
 void board::drawBoard()
 {
+    int pressed=input->getCurrentKeyPressed();
+    if(pressed) cout<<pressed<<endl;
+    
     Color affectedCells={226, 235, 243,255};
+    Color affectedCellMain={68, 114, 202,128};
     Color selectedCell={187, 222, 251,255};
     
-    // Drawing the hovering cell highligh
+
     int hoveringIndex=hoverCheck();
+    
     if(hover)
     {
-        Rectangle hoverRect={plotStart.x+(hoveringIndex%9)*unitSize,plotStart.y+(hoveringIndex/9)*unitSize,unitSize*1.0f-1,unitSize*1.0f-1};
-        // cout<<hoveringIndex<<endl;
-        DrawRectangleRec(hoverRect,selectedCell);        
-    }
+        Rectangle highlightingEffect;
 
+        // Highlighting affected cells
+        highlightingEffect={plotStart.x,plotStart.y+(hoveringIndex/9)*unitSize,unitSize*1.0f*column,unitSize*1.0f};
+        DrawRectangleRec(highlightingEffect,affectedCells);
+
+        highlightingEffect={plotStart.x+(hoveringIndex%9)*unitSize,plotStart.y,unitSize*1.0f,unitSize*1.0f*row};
+        DrawRectangleRec(highlightingEffect,affectedCells);
+
+        highlightingEffect={plotStart.x+((hoveringIndex%9)/3)*unitSize*3,plotStart.y+(hoveringIndex/27)*unitSize*3,unitSize*column/3.0f,unitSize*row/3.0f};
+        DrawRectangleRec(highlightingEffect,affectedCells);
+
+        // Drawing the hovering cell highlight    
+        highlightingEffect={plotStart.x+(hoveringIndex%9)*unitSize,plotStart.y+(hoveringIndex/9)*unitSize,unitSize*1.0f-1,unitSize*1.0f-1};
+        DrawRectangleRec(highlightingEffect,WHITE); 
+        DrawRectangleRec(highlightingEffect,affectedCellMain);
+    }
 
     // Drawing the 9 cells
     for (int i = 0; i < row + 1; i++)
@@ -105,7 +124,14 @@ void board::drawBoard()
 
         vLineStart.x += unitSize;
         vLineEnd.x += unitSize;
+    }    
+    // Displaying the numbers
+    {
+        char text[2]={' ','\0'};
+        Rectangle highlightingEffect={plotStart.x+(hoveringIndex%9)*unitSize,plotStart.y+(hoveringIndex/9)*unitSize,unitSize*1.0f-1,unitSize*1.0f-1};
+        DrawText(text,highlightingEffect.x+unitSize/2,highlightingEffect.y+unitSize/2,10,RED);
     }
+
     plotStart = {float(screen.x) / 2 - column * unitSize / 2, float(screen.y) / 2 - row * unitSize / 2};
     plotEnd = {float(screen.x) / 2 + column * unitSize / 2, float(screen.y) / 2 + row * unitSize / 2};
 
@@ -114,9 +140,6 @@ void board::drawBoard()
 
     vLineStart = plotStart;
     vLineEnd = {plotStart.x, plotEnd.y};
-
-    
-
 }
 
 void board::setup()
@@ -124,19 +147,18 @@ void board::setup()
     // Window settings
     InitWindow(screen.x, screen.y, "Sudoku");
     SetTargetFPS(60);
-    srand(time(NULL));
 }
 
 board::~board()
 {
+    delete input;
     return;
 }
 
 int board::hoverCheck()
 {
     // Checking if hovering
-    inputHandling input;
-    int2d mouse = input.getMouseCursorPosition();
+    int2d mouse = input->getMouseCursorPosition();
     int hoveringCellIndex=-1;
     if((mouse.x>=plotStart.x && mouse.x<=plotEnd.x)&&(mouse.y>=plotStart.y && mouse.y<=plotEnd.y))
     {
@@ -147,7 +169,7 @@ int board::hoverCheck()
     {
         hover = false;
         hoveringCellIndex=-1;
-    }
+    }    
     return hoveringCellIndex;    
 }
 
@@ -166,7 +188,11 @@ inputHandling::~inputHandling()
     return;
 }
 
-char inputHandling::getCurrentKeyPressed(){return currentKeyPress;}
+int inputHandling::getCurrentKeyPressed()
+{   
+    currentKeyPress = GetKeyPressed();
+    return currentKeyPress;
+}
 
 int2d inputHandling::getMouseCursorPosition()
 {
@@ -187,13 +213,16 @@ bool inputHandling::getMouseButtonPressed()
 int main()
 {
     board sudoku;
+    inputHandling inp;
     sudoku.setup();
 
     while (!WindowShouldClose())
     {
         BeginDrawing();
-        ClearBackground(WHITE);
+        ClearBackground(WHITE); 
+        // inp.getCurrentKeyPressed();       
         sudoku.drawBoard();
+        
 
         EndDrawing();
     }
